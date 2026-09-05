@@ -4,7 +4,9 @@
 
 # [
 source "$SRC_DIR/scripts/utils/firmware_utils.sh" || exit 1
-source "$TOOLS_DIR/venv/bin/activate" || exit 1
+
+# Aponta diretamente para o samloader na raiz da source
+SAMLOADER_BIN="$SRC_DIR/samloader"
 
 FORCE=false
 
@@ -110,6 +112,12 @@ VERIFY_ODIN_PACKAGES()
 
 PREPARE_SCRIPT "$@"
 
+# Valida se o samloader realmente existe no caminho da raiz antes de executar
+if [ ! -f "$SAMLOADER_BIN" ]; then
+    LOGE "Executable samloader not found at: $SAMLOADER_BIN"
+    exit 1
+fi
+
 for i in "${FIRMWARES[@]}"; do
     PARSE_FIRMWARE_STRING "$i" || exit 1
 
@@ -152,10 +160,9 @@ for i in "${FIRMWARES[@]}"; do
     [ -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ] && rm -rf "$ODIN_DIR/${MODEL}_${CSC}"
     mkdir -p "$ODIN_DIR/${MODEL}_${CSC}"
     # shellcheck disable=SC2164
-    # Anan's samloader stores its logs in the current working directory, let's move into OUT_DIR just for this time
     (
     cd "$OUT_DIR"
-    samloader -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
+    "$SAMLOADER_BIN" -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
     )
 
     ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "*.zip" | sort -r | head -n 1)"
@@ -173,7 +180,5 @@ for i in "${FIRMWARES[@]}"; do
 
     LOG_STEP_OUT; LOG_STEP_OUT
 done
-
-deactivate
 
 exit 0
