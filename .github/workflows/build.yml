@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [t2s)
+        target: [t2s]
 
     steps:
       - name: Checkout repo
