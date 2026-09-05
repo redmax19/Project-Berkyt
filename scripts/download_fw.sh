@@ -118,6 +118,9 @@ if [ ! -f "$SAMLOADER_BIN" ]; then
     exit 1
 fi
 
+# Garante permissão de execução ao samloader para evitar 'Permission denied' em CI/CD
+chmod +x "$SAMLOADER_BIN" 2>/dev/null || true
+
 for i in "${FIRMWARES[@]}"; do
     PARSE_FIRMWARE_STRING "$i" || exit 1
 
@@ -159,10 +162,16 @@ for i in "${FIRMWARES[@]}"; do
     LOG "- Downloading firmware..."
     [ -f "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ] && rm -rf "$ODIN_DIR/${MODEL}_${CSC}"
     mkdir -p "$ODIN_DIR/${MODEL}_${CSC}"
+    
+    # Monta os argumentos do samloader incluindo IMEI/Serial apenas se definidos e passando a versão FUS obtida
+    SAMLOADER_ARGS=(-m "$MODEL" -r "$CSC")
+    [ -n "$IMEI" ] && SAMLOADER_ARGS+=(-i "$IMEI")
+    [ -n "$SERIAL_NO" ] && SAMLOADER_ARGS+=(-s "$SERIAL_NO")
+
     # shellcheck disable=SC2164
     (
     cd "$OUT_DIR"
-    "$SAMLOADER_BIN" -m "$MODEL" -r "$CSC" -i "$IMEI" -s "$SERIAL_NO" download -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
+    "$SAMLOADER_BIN" "${SAMLOADER_ARGS[@]}" download -v "$LATEST_FIRMWARE" -O "$ODIN_DIR/${MODEL}_${CSC}" 1> /dev/null || exit 1
     )
 
     ZIP_FILE="$(find "$ODIN_DIR/${MODEL}_${CSC}" -name "*.zip" | sort -r | head -n 1)"
